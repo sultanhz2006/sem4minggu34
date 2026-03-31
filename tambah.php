@@ -3,7 +3,7 @@ include 'config.php';
 
 if(isset($_POST['simpan'])){
 
-// Escape string (keamanan input)
+// escape string
 $kode = mysqli_real_escape_string($conn, $_POST['kode']);
 $nama = mysqli_real_escape_string($conn, $_POST['nama']);
 $satuan = mysqli_real_escape_string($conn, $_POST['satuan']);
@@ -13,10 +13,6 @@ $harga_beli = $_POST['harga_beli'];
 $harga_jual = $_POST['harga_jual'];
 $jumlah = $_POST['jumlah'];
 $tanggal = $_POST['tanggal'];
-
-// Upload foto
-$foto = $_FILES['foto']['name'];
-$tmp = $_FILES['foto']['tmp_name'];
 
 // VALIDASI INPUT
 if(!preg_match("/^[a-zA-Z\s]+$/",$nama)){
@@ -30,7 +26,14 @@ if(empty($kode) || empty($nama)){
 }
 
 // upload foto
-move_uploaded_file($tmp,"upload/".$foto);
+$foto = $_FILES['foto']['name'];
+$tmp = $_FILES['foto']['tmp_name'];
+
+if(!empty($foto)){
+    move_uploaded_file($tmp,"upload/".$foto);
+}else{
+    $foto = "default.png"; // optional fallback
+}
 
 // PREPARED STATEMENT
 $stmt = $conn->prepare("INSERT INTO barang 
@@ -65,15 +68,29 @@ exit();
 <title>Tambah Barang</title>
 <link rel="stylesheet" href="style.css">
 
+<style>
+body{
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+}
+
+.container{
+max-width:500px;
+width:100%;
+}
+</style>
+
 </head>
 
 <body>
 
 <div class="container">
 
-<h2>Tambah Barang</h2>
-
 <form method="POST" enctype="multipart/form-data">
+
+<h2 style="text-align:center;">Tambah Barang</h2>
 
 <label>Kode Barang</label>
 <input type="text" name="kode" required>

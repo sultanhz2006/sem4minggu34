@@ -1,69 +1,207 @@
 <?php
-include 'config.php';
-$data = mysqli_query($conn,"SELECT * FROM barang");
+session_start();
 
+if(!isset($_SESSION['login'])){
+    if(isset($_COOKIE['login'])){
+        $_SESSION['login'] = true;
+    } else {
+        header("Location: login.php");
+        exit();
+    }
+}
+
+include 'config.php';
+
+// DATA
+$data = mysqli_query($conn, "SELECT * FROM barang");
 $total_barang = mysqli_num_rows($data);
 
-$stok = mysqli_query($conn,"SELECT SUM(jumlah) as total FROM barang");
+$stok = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM barang");
 $stok_data = mysqli_fetch_assoc($stok);
-$total_stok = $stok_data['total'];
+$total_stok = $stok_data['total'] ? $stok_data['total'] : 0;
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
+<title>Dashboard</title>
 
-<title>Sistem Inventaris ATK</title>
-<link rel="stylesheet" href="style.css">
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:"Segoe UI",sans-serif;
+}
+
+body{
+padding:30px;
+color:white;
+
+background:
+radial-gradient(circle at 20% 30%,#1e293b,transparent 40%),
+radial-gradient(circle at 80% 70%,#0f172a,transparent 50%),
+#020617;
+}
+
+/* NAVBAR */
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:25px;
+}
+
+.nav-title{
+font-size:20px;
+font-weight:600;
+}
+
+.nav-right{
+display:flex;
+gap:10px;
+}
+
+.nav-right a{
+padding:8px 14px;
+border-radius:6px;
+text-decoration:none;
+color:white;
+background:rgba(255,255,255,0.08);
+}
+
+/* SEARCH */
+#search{
+padding:8px 12px;
+border:none;
+border-radius:6px;
+background:rgba(255,255,255,0.08);
+color:white;
+}
+
+/* STATS */
+.stats{
+display:flex;
+gap:20px;
+margin-bottom:25px;
+}
+
+.stat{
+flex:1;
+padding:20px;
+border-radius:12px;
+
+background:rgba(20,20,25,0.6);
+backdrop-filter:blur(18px);
+
+border:1px solid rgba(255,255,255,0.08);
+}
+
+.stat h3{
+font-size:28px;
+}
+
+.stat p{
+opacity:0.7;
+}
+
+/* CARD */
+.card{
+padding:15px;
+border-radius:12px;
+
+background:rgba(20,20,25,0.6);
+backdrop-filter:blur(18px);
+
+border:1px solid rgba(255,255,255,0.08);
+}
+
+/* BUTTON */
+.btn{
+padding:8px 14px;
+border-radius:6px;
+text-decoration:none;
+color:white;
+font-size:13px;
+display:inline-block;
+}
+
+.add{background:#4f46e5;}
+.edit{background:#10b981;}
+.delete{background:#ef4444;}
+
+/* TABLE */
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th, td{
+padding:12px;
+text-align:center;
+}
+
+th{
+background:rgba(255,255,255,0.05);
+}
+
+tr:hover{
+background:rgba(255,255,255,0.04);
+}
+
+img{
+width:60px;
+border-radius:6px;
+}
+
+/* EMPTY */
+.empty{
+padding:20px;
+text-align:center;
+opacity:0.6;
+}
+</style>
 
 </head>
 
 <body>
 
 <!-- NAVBAR -->
-
 <div class="navbar">
+    <div class="nav-title">📦 Inventaris ATK</div>
 
-<div class="nav-title">
-Inventaris ATK
+    <div class="nav-right">
+        <input type="text" id="search" placeholder="Cari barang...">
+        <a href="tambah.php">+ Tambah</a>
+        <a href="logout.php">Logout</a>
+    </div>
 </div>
-
-<input type="text" id="search" placeholder="🔍 Cari barang...">
-
-</div>
-
-
-<div class="container">
-
-<h2>Dashboard Inventaris</h2>
 
 <!-- STATS -->
-
 <div class="stats">
 
-<div class="stat-card">
-<h3><?= $total_barang ?></h3>
-<p>Total Barang</p>
+    <div class="stat">
+        <h3><?php echo $total_barang; ?></h3>
+        <p>Total Barang</p>
+    </div>
+
+    <div class="stat">
+        <h3><?php echo $total_stok; ?></h3>
+        <p>Total Stok</p>
+    </div>
+
+    <div class="stat">
+        <h3><?php echo date("d M Y"); ?></h3>
+        <p>Tanggal</p>
+    </div>
+
 </div>
 
-<div class="stat-card">
-<h3><?= $total_stok ?></h3>
-<p>Total Stok</p>
-</div>
-
-<div class="stat-card">
-<h3><?= date("d M Y") ?></h3>
-<p>Tanggal</p>
-</div>
-
-</div>
-
-
-<a href="tambah.php" class="btn btn-add">+ Tambah Barang</a>
-
+<!-- TABLE -->
 <div class="card">
 
-<table class="table" id="barangTable">
+<table id="tbl">
 
 <tr>
 <th>Kode</th>
@@ -77,33 +215,34 @@ Inventaris ATK
 <th>Aksi</th>
 </tr>
 
-<?php while($d=mysqli_fetch_array($data)){ ?>
+<?php if($total_barang > 0){ ?>
+<?php while($d = mysqli_fetch_assoc($data)){ ?>
 
 <tr>
-
-<td><?= $d['kode_barang']; ?></td>
-<td><?= $d['nama_barang']; ?></td>
-<td><?= $d['satuan']; ?></td>
-<td>Rp <?= number_format($d['harga_beli']); ?></td>
-<td>Rp <?= number_format($d['harga_jual']); ?></td>
-<td><?= $d['jumlah']; ?></td>
-<td><?= $d['tanggal_masuk']; ?></td>
+<td><?php echo htmlspecialchars($d['kode_barang']); ?></td>
+<td><?php echo htmlspecialchars($d['nama_barang']); ?></td>
+<td><?php echo htmlspecialchars($d['satuan']); ?></td>
+<td>Rp <?php echo number_format($d['harga_beli']); ?></td>
+<td>Rp <?php echo number_format($d['harga_jual']); ?></td>
+<td><?php echo $d['jumlah']; ?></td>
+<td><?php echo $d['tanggal_masuk']; ?></td>
 
 <td>
-<img src="upload/<?= $d['foto']; ?>" class="foto">
+<img src="upload/<?php echo htmlspecialchars($d['foto']); ?>">
 </td>
 
 <td>
-
-<a href="edit.php?id=<?= $d['id_barang']; ?>" class="btn btn-edit">Edit</a>
-
-<button class="btn btn-delete"
-onclick="confirmDelete('hapus.php?id=<?= $d['id_barang']; ?>')">
-Hapus
-</button>
-
+<a href="edit.php?id=<?php echo $d['id_barang']; ?>" class="btn edit">Edit</a>
+<a href="hapus.php?id=<?php echo $d['id_barang']; ?>" class="btn delete">Hapus</a>
 </td>
 
+</tr>
+
+<?php } ?>
+<?php } else { ?>
+
+<tr>
+<td colspan="9" class="empty">Tidak ada data</td>
 </tr>
 
 <?php } ?>
@@ -112,77 +251,22 @@ Hapus
 
 </div>
 
-</div>
-
-
-<!-- DELETE MODAL -->
-
-<div id="deleteModal" class="modal">
-
-<div class="modal-box">
-
-<p>Yakin ingin menghapus data ini?</p>
-
-<div class="modal-btn">
-
-<button id="yesDelete" class="btn btn-delete">Hapus</button>
-<button onclick="closeModal()" class="btn">Batal</button>
-
-</div>
-
-</div>
-
-</div>
-
-
 <script>
+// SEARCH FIX (aman dari error null)
+var search = document.getElementById("search");
 
-/* SEARCH */
+if(search){
+search.addEventListener("keyup", function(){
+    var val = this.value.toLowerCase();
+    var rows = document.querySelectorAll("#tbl tr");
 
-document.getElementById("search").addEventListener("keyup", function(){
-
-let filter = this.value.toLowerCase();
-let rows = document.querySelectorAll("#barangTable tr");
-
-rows.forEach((row,i)=>{
-
-if(i===0) return;
-
-let text = row.innerText.toLowerCase();
-
-row.style.display = text.includes(filter) ? "" : "none";
-
+    rows.forEach(function(r, i){
+        if(i === 0) return;
+        r.style.display = r.innerText.toLowerCase().includes(val) ? "" : "none";
+    });
 });
-
-});
-
-
-/* DELETE MODAL */
-
-let deleteLink="";
-
-function confirmDelete(link){
-
-deleteLink=link;
-
-document.getElementById("deleteModal").style.display="flex";
-
 }
-
-function closeModal(){
-
-document.getElementById("deleteModal").style.display="none";
-
-}
-
-document.getElementById("yesDelete").onclick=function(){
-
-window.location=deleteLink;
-
-}
-
 </script>
 
 </body>
 </html>
-```

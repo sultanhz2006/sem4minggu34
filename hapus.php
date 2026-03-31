@@ -1,11 +1,13 @@
 <?php
-
 include 'config.php';
 
-$id = $_GET['id'];
+$id = $_GET['id'] ?? 0;
 
-mysqli_query($conn,"DELETE FROM barang WHERE id_barang='$id'");
+// prepared statement (AMAN)
+$stmt = $conn->prepare("DELETE FROM barang WHERE id_barang=?");
+$stmt->bind_param("i",$id);
+$stmt->execute();
 
 header("location:index.php");
-
+exit();
 ?>
